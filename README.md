@@ -1,6 +1,6 @@
 # OpenClaw 本地/远程控制台
 
-这是一个可直接运行的 OpenClaw 控制台（静态前端 + Node 服务层），默认本地访问地址：
+这是一个可直接运行的 OpenClaw 控制台（静态前端 + Node 服务层），默认本地访问地址（固定保留，不会被远程配置覆盖）：
 
 - `http://127.0.0.1:18789`
 
@@ -20,6 +20,7 @@
 - `ACCESS_TOKEN`：可选；设置后请求需携带 token
 - `OPENCLAW_BIN`：可选；默认 `openclaw`
 - `OPENCLAW_MOCK`：可选；设置为 `1` 时使用模拟进程（便于无 openclaw 环境联调）
+- `LOCAL_BIND_PORT`：可选；默认 `18789`（通常无需改，仅测试场景使用）
 
 ## 本地启动（仅本机访问）
 
@@ -30,6 +31,8 @@ node server.js
 ## Tailscale 远程访问
 
 ### 1) 在服务端机器启动（允许远程）
+
+> 即使使用 `HOST=0.0.0.0`，也会保留本地入口 `127.0.0.1:18789`。
 
 ```bash
 HOST=0.0.0.0 PORT=18789 ACCESS_TOKEN=your-token node server.js

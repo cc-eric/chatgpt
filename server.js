@@ -9,6 +9,10 @@ const ACCESS_TOKEN = (process.env.ACCESS_TOKEN || '').trim();
 const OPENCLAW_BIN = process.env.OPENCLAW_BIN || 'openclaw';
 const OPENCLAW_MOCK = process.env.OPENCLAW_MOCK === '1';
 
+// 保底本地入口：不允许被远程绑定覆盖。
+const LOCAL_HOST = '127.0.0.1';
+const LOCAL_PORT = Number(process.env.LOCAL_BIND_PORT || 18789);
+
 const root = __dirname;
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -54,9 +58,7 @@ function readBody(req) {
     let raw = '';
     req.on('data', (chunk) => {
       raw += chunk;
-      if (raw.length > 1_000_000) {
-        reject(new Error('payload too large'));
-      }
+      if (raw.length > 1_000_000) reject(new Error('payload too large'));
     });
     req.on('end', () => resolve(raw));
     req.on('error', reject);
@@ -66,9 +68,7 @@ function readBody(req) {
 function safeFilePath(urlPathname) {
   const target = urlPathname === '/' ? '/index.html' : urlPathname;
   const resolved = path.resolve(root, `.${target}`);
-  if (!resolved.startsWith(root)) {
-    return null;
-  }
+  if (!resolved.startsWith(root)) return null;
   return resolved;
 }
 
@@ -212,6 +212,7 @@ async function handleApi(req, res, reqUrl) {
       command: runtime.command,
       serverHost: HOST,
       serverPort: PORT,
+      localAccessUrl: `http://${LOCAL_HOST}:${LOCAL_PORT}`,
       hasToken: Boolean(ACCESS_TOKEN),
       pid: runtime.pid,
       uptimeSec: runtime.startedAt ? Math.floor((Date.now() - runtime.startedAt) / 1000) : 0
@@ -251,7 +252,7 @@ async function handleApi(req, res, reqUrl) {
   sendJSON(res, 404, { error: 'not found' });
 }
 
-const server = http.createServer(async (req, res) => {
+const requestHandler = async (req, res) => {
   try {
     const reqUrl = new URL(req.url, `http://${req.headers.host || `${HOST}:${PORT}`}`);
 
@@ -289,10 +290,34 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     sendJSON(res, 500, { error: 'server_error', message: error.message });
   }
-});
+};
 
-server.listen(PORT, HOST, () => {
-  console.log(`[openclaw-ui] listening at http://${HOST}:${PORT}`);
-  if (ACCESS_TOKEN) console.log('[openclaw-ui] access token enabled');
-  if (OPENCLAW_MOCK) console.log('[openclaw-ui] mock mode enabled');
-});
+function createServer(name, host, port) {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer(requestHandler);
+    server.once('error', reject);
+    server.listen(port, host, () => {
+      server.removeListener('error', reject);
+      console.log(`[openclaw-ui] ${name} listening at http://${host}:${port}`);
+      resolve(server);
+    });
+  });
+}
+
+(async () => {
+  try {
+    await createServer('primary', HOST, PORT);
+
+    const localIsPrimary = HOST === LOCAL_HOST && PORT === LOCAL_PORT;
+    if (!localIsPrimary) {
+      await createServer('local-fallback', LOCAL_HOST, LOCAL_PORT);
+      console.log('[openclaw-ui] local fallback enabled (cannot override 127.0.0.1:18789)');
+    }
+
+    if (ACCESS_TOKEN) console.log('[openclaw-ui] access token enabled');
+    if (OPENCLAW_MOCK) console.log('[openclaw-ui] mock mode enabled');
+  } catch (error) {
+    console.error('[openclaw-ui] startup failed:', error.message);
+    process.exit(1);
+  }
+})();

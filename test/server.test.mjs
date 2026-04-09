@@ -25,7 +25,7 @@ async function waitForServerReady(host, port, token, maxTry = 20) {
   throw new Error('server not ready in time');
 }
 
-function spawnServer({ port, mock, bin = 'openclaw' }) {
+function spawnServer({ port, mock, bin = 'openclaw', localBindPort }) {
   return spawn('node', ['server.js'], {
     cwd: process.cwd(),
     env: {
@@ -34,14 +34,16 @@ function spawnServer({ port, mock, bin = 'openclaw' }) {
       PORT: String(port),
       ACCESS_TOKEN: TOKEN,
       OPENCLAW_MOCK: mock ? '1' : '0',
-      OPENCLAW_BIN: bin
+      OPENCLAW_BIN: bin,
+      LOCAL_BIND_PORT: String(localBindPort || port + 200)
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
 }
 
 test('server auth + lifecycle + logs api', async (t) => {
-  const child = spawnServer({ port: PORT, mock: true });
+  const localBindPort = 18991;
+  const child = spawnServer({ port: PORT, mock: true, localBindPort });
 
   t.after(() => {
     child.kill('SIGTERM');
@@ -58,6 +60,7 @@ test('server auth + lifecycle + logs api', async (t) => {
   assert.equal(status.status, 200);
   const statusBody = await status.json();
   assert.equal(statusBody.running, false);
+  assert.equal(statusBody.localAccessUrl, `http://127.0.0.1:${localBindPort}`);
 
   const start = await fetch(`http://${HOST}:${PORT}/api/start`, {
     method: 'POST',
@@ -104,7 +107,7 @@ test('server auth + lifecycle + logs api', async (t) => {
 
 test('start api returns 500 when binary is missing (no false success)', async (t) => {
   const port = 18792;
-  const child = spawnServer({ port, mock: false, bin: '__definitely_missing_openclaw__' });
+  const child = spawnServer({ port, mock: false, bin: '__definitely_missing_openclaw__', localBindPort: 18992 });
 
   t.after(() => {
     child.kill('SIGTERM');

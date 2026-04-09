@@ -31,6 +31,7 @@ const state = {
   token: new URLSearchParams(window.location.search).get('token') || '',
   serverHost: '127.0.0.1',
   serverPort: 18789,
+  localAccessUrl: 'http://127.0.0.1:18789',
   running: false,
   pid: null,
   lastRun: '--',
@@ -73,7 +74,7 @@ function updateStatusUI() {
   lastRun.textContent = state.lastRun;
   listenAddress.textContent = `${state.serverHost}:${state.serverPort}`;
 
-  const localUrl = `http://127.0.0.1:${state.serverPort}`;
+  const localUrl = state.localAccessUrl || 'http://127.0.0.1:18789';
   localUrlNode.textContent = `本地: ${localUrl}`;
 
   if (fields.remoteEnabled.checked && fields.tailscaleHost.value.trim()) {
@@ -124,6 +125,7 @@ async function refreshStatus() {
   state.lastRun = status.lastRun || '--';
   state.serverHost = status.serverHost || '127.0.0.1';
   state.serverPort = status.serverPort || 18789;
+  state.localAccessUrl = status.localAccessUrl || 'http://127.0.0.1:18789';
   state.pid = status.pid || null;
   updateStatusUI();
 }
