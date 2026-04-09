@@ -122,6 +122,7 @@ function cleanupProcessState() {
   runtime.process = null;
   runtime.pid = null;
   runtime.running = false;
+  runtime.startedAt = null;
 }
 
 function startMockProcess() {
@@ -161,11 +162,13 @@ function startOpenClaw(config) {
   pushLog('info', `启动命令: ${runtime.command}`);
 
   child.stdout.on('data', (chunk) => {
-    pushLog('info', chunk.toString().trim());
+    const text = chunk.toString().trim();
+    if (text) pushLog('info', text);
   });
 
   child.stderr.on('data', (chunk) => {
-    pushLog('warn', chunk.toString().trim());
+    const text = chunk.toString().trim();
+    if (text) pushLog('warn', text);
   });
 
   child.on('error', (err) => {

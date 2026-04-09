@@ -40,6 +40,18 @@ HOST=0.0.0.0 PORT=18789 ACCESS_TOKEN=your-token node server.js
 - `http://<tailscale-ip>:18789/?token=your-token`
 - `http://<magicdns-hostname>:18789/?token=your-token`
 
+
+## 运行测试
+
+```bash
+npm test
+```
+
+测试会在 `OPENCLAW_MOCK=1` 下验证：
+
+- token 鉴权（未授权返回 401）
+- `/api/status`、`/api/start`、`/api/logs`、`/api/stop` 生命周期流程
+
 ## API 示例
 
 ```bash

@@ -1,0 +1,10 @@
+{
+  "name": "openclaw-web-console",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OpenClaw local/remote web control console",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.mjs"
+  }
+}
