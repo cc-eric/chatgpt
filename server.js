@@ -4,14 +4,18 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 
 const HOST = process.env.HOST || '127.0.0.1';
-const PORT = Number(process.env.PORT || 18789);
+const RESERVED_OPENCLAW_PORT = 18789;
+const DEFAULT_UI_PORT = 18889;
+const requestedPrimaryPort = Number(process.env.PORT || DEFAULT_UI_PORT);
+const requestedLocalPort = Number(process.env.LOCAL_BIND_PORT || DEFAULT_UI_PORT);
+const PORT = requestedPrimaryPort === RESERVED_OPENCLAW_PORT ? DEFAULT_UI_PORT : requestedPrimaryPort;
 const ACCESS_TOKEN = (process.env.ACCESS_TOKEN || '').trim();
 const OPENCLAW_BIN = process.env.OPENCLAW_BIN || 'openclaw';
 const OPENCLAW_MOCK = process.env.OPENCLAW_MOCK === '1';
 
-// 保底本地入口：不允许被远程绑定覆盖。
+// 本地入口始终保留，但不得占用 openclaw 默认端口 18789。
 const LOCAL_HOST = '127.0.0.1';
-const LOCAL_PORT = Number(process.env.LOCAL_BIND_PORT || 18789);
+const LOCAL_PORT = requestedLocalPort === RESERVED_OPENCLAW_PORT ? DEFAULT_UI_PORT : requestedLocalPort;
 
 const root = __dirname;
 const mimeTypes = {
@@ -306,12 +310,16 @@ function createServer(name, host, port) {
 
 (async () => {
   try {
+    if (requestedPrimaryPort === RESERVED_OPENCLAW_PORT || requestedLocalPort === RESERVED_OPENCLAW_PORT) {
+      console.warn(`[openclaw-ui] port ${RESERVED_OPENCLAW_PORT} reserved for openclaw; remapped to ${DEFAULT_UI_PORT}`);
+    }
+
     await createServer('primary', HOST, PORT);
 
     const localIsPrimary = HOST === LOCAL_HOST && PORT === LOCAL_PORT;
     if (!localIsPrimary) {
       await createServer('local-fallback', LOCAL_HOST, LOCAL_PORT);
-      console.log('[openclaw-ui] local fallback enabled (cannot override 127.0.0.1:18789)');
+      console.log('[openclaw-ui] local fallback enabled (openclaw 127.0.0.1:18789 kept free)');
     }
 
     if (ACCESS_TOKEN) console.log('[openclaw-ui] access token enabled');

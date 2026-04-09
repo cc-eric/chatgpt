@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">OpenClaw</p>
           <h1>本地/远程 控制台</h1>
-          <p class="muted">默认监听 127.0.0.1:18789，也支持通过 Tailscale 内网远程访问。</p>
+          <p class="muted">默认监听 127.0.0.1:18889，也支持通过 Tailscale 内网远程访问。</p>
         </div>
 
         <section class="status-overview">
@@ -26,14 +26,14 @@
           </div>
           <div>
             <span class="label">服务监听</span>
-            <strong id="listen-address">127.0.0.1:18789</strong>
+            <strong id="listen-address">127.0.0.1:18889</strong>
           </div>
         </section>
 
         <section class="tips-panel compact">
           <h4>快速访问</h4>
           <ul>
-            <li id="local-url">本地: http://127.0.0.1:18789</li>
+            <li id="local-url">本地: http://127.0.0.1:18889</li>
             <li id="remote-url">远程: 未配置</li>
           </ul>
           <button id="copy-url-btn" class="ghost-btn small">复制当前访问地址</button>
@@ -127,7 +127,7 @@
             <div class="tips-panel">
               <h4>服务器启动建议</h4>
               <ul id="suggestions">
-                <li>本地模式: node server.js（默认 127.0.0.1:18789）。</li>
+                <li>本地模式: node server.js（默认 127.0.0.1:18889）。</li>
                 <li>远程模式: HOST=0.0.0.0 PORT=18789 node server.js。</li>
                 <li>建议配置 ACCESS_TOKEN 保护远程访问。</li>
               </ul>

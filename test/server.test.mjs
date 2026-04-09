@@ -134,3 +134,24 @@ test('start api returns 500 when binary is missing (no false success)', async (t
   const body = await start.json();
   assert.match(body.message, /进程启动失败/);
 });
+
+
+test('reserved port 18789 is remapped to 18889 for UI server', async (t) => {
+  const port = 18789;
+  const localBindPort = 18789;
+  const child = spawnServer({ port, mock: true, localBindPort });
+
+  t.after(() => {
+    child.kill('SIGTERM');
+  });
+
+  await waitForServerReady(HOST, 18889, TOKEN);
+
+  const status = await fetch(`http://${HOST}:18889/api/status`, {
+    headers: { 'x-access-token': TOKEN }
+  });
+  assert.equal(status.status, 200);
+  const body = await status.json();
+  assert.equal(body.serverPort, 18889);
+  assert.equal(body.localAccessUrl, 'http://127.0.0.1:18889');
+});
