@@ -21,6 +21,7 @@ const fields = {
   gpuLayers: document.getElementById('gpu-layers'),
   preset: document.getElementById('preset-select'),
   autoBrowser: document.getElementById('auto-browser'),
+  openInternet: document.getElementById('open-internet'),
   tailscaleHost: document.getElementById('tailscale-host'),
   accessToken: document.getElementById('access-token'),
   remoteEnabled: document.getElementById('remote-enabled')
@@ -58,7 +59,8 @@ function buildRunCommand() {
     `--gpu-layers ${fields.gpuLayers.value}`,
     `--threads ${preset.threads}`,
     `--batch-size ${preset.batch}`,
-    fields.autoBrowser.checked ? '--open-browser' : null
+    fields.autoBrowser.checked ? '--open-browser' : null,
+    fields.openInternet.checked ? '--allow-internet' : null
   ].filter(Boolean);
 }
 
@@ -150,7 +152,8 @@ async function startService() {
     contextSize: Number(fields.contextSize.value),
     gpuLayers: Number(fields.gpuLayers.value),
     preset: fields.preset.value,
-    autoBrowser: fields.autoBrowser.checked
+    autoBrowser: fields.autoBrowser.checked,
+    openInternet: fields.openInternet.checked
   };
 
   try {

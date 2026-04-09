@@ -65,13 +65,22 @@ test('server auth + lifecycle + logs api', async (t) => {
       servicePort: 8080,
       contextSize: 8192,
       gpuLayers: 35,
-      preset: 'balanced'
+      preset: 'balanced',
+      openInternet: true
     })
   });
 
   assert.equal(start.status, 200);
   const startBody = await start.json();
   assert.equal(startBody.running, true);
+
+
+  const statusAfterStart = await fetch(`http://${HOST}:${PORT}/api/status`, {
+    headers: { 'x-access-token': TOKEN }
+  });
+  assert.equal(statusAfterStart.status, 200);
+  const statusAfterStartBody = await statusAfterStart.json();
+  assert.match(statusAfterStartBody.command, /--allow-internet/);
 
   const logs = await fetch(`http://${HOST}:${PORT}/api/logs?since=0`, {
     headers: { 'x-access-token': TOKEN }

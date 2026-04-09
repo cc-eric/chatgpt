@@ -115,6 +115,10 @@ function buildArgs(config) {
     args.push('--open-browser');
   }
 
+  if (Boolean(config.openInternet)) {
+    args.push('--allow-internet');
+  }
+
   return args;
 }
 
@@ -140,13 +144,13 @@ function startOpenClaw(config) {
 
   runtime.config = config;
 
+  const args = buildArgs(config);
+
   if (OPENCLAW_MOCK) {
-    runtime.command = `${OPENCLAW_BIN} <mock>`;
+    runtime.command = `${OPENCLAW_BIN} ${args.join(' ')} [mock]`;
     startMockProcess();
     return;
   }
-
-  const args = buildArgs(config);
   runtime.command = `${OPENCLAW_BIN} ${args.join(' ')}`;
   const child = spawn(OPENCLAW_BIN, args, {
     stdio: ['ignore', 'pipe', 'pipe'],

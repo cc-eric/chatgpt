@@ -8,7 +8,7 @@
 
 ## 现在支持什么
 
-- 运行参数编辑、预设切换、命令预览。
+- 运行参数编辑、预设切换、命令预览（含“开放互联网”开关）。
 - 实际 OpenClaw 子进程生命周期控制：启动 / 停止 / 状态查询。
 - 后端日志缓存与前端轮询展示（`/api/logs`）。
 - 可选访问鉴权（`ACCESS_TOKEN`）。
@@ -64,6 +64,6 @@ curl -H 'x-access-token: your-token' 'http://127.0.0.1:18789/api/logs?since=0'
 
 ```bash
 curl -X POST -H 'x-access-token: your-token' -H 'Content-Type: application/json' \
-  -d '{"modelPath":"./models/openclaw-q4.gguf","servicePort":8080,"contextSize":8192,"gpuLayers":35,"preset":"balanced"}' \
+  -d '{"modelPath":"./models/openclaw-q4.gguf","servicePort":8080,"contextSize":8192,"gpuLayers":35,"preset":"balanced","openInternet":true}' \
   http://127.0.0.1:18789/api/start
 ```
