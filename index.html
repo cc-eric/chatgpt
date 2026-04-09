@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenClaw 本地运行台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar card">
+        <div>
+          <p class="eyebrow">OpenClaw</p>
+          <h1>本地运行台</h1>
+          <p class="muted">
+            将模型、端口、资源占用与运行日志整合到一个面板中，便于本地快速调试和演示。
+          </p>
+        </div>
+
+        <section class="status-overview">
+          <div>
+            <span class="label">运行状态</span>
+            <strong id="run-status">待启动</strong>
+          </div>
+          <div>
+            <span class="label">最后执行</span>
+            <strong id="last-run">未开始</strong>
+          </div>
+        </section>
+
+        <nav class="quick-links">
+          <button class="ghost-btn active">运行配置</button>
+          <button class="ghost-btn">资源监控</button>
+          <button class="ghost-btn">日志视图</button>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <section class="hero card">
+          <div>
+            <p class="eyebrow">Local Workflow</p>
+            <h2>更快启动，更清晰反馈</h2>
+            <p class="muted">
+              通过分组配置、启动前校验、实时指标与彩色日志区域，减少本地运行 OpenClaw 时的来回切换。
+            </p>
+          </div>
+          <div class="hero-actions">
+            <button id="start-btn" class="primary-btn">启动 OpenClaw</button>
+            <button id="stop-btn" class="secondary-btn">停止服务</button>
+          </div>
+        </section>
+
+        <section class="grid two-col">
+          <section class="card form-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Config</p>
+                <h3>运行参数</h3>
+              </div>
+              <span class="badge">启动前自动校验</span>
+            </div>
+
+            <form id="config-form" class="config-form">
+              <label>
+                模型路径
+                <input type="text" id="model-path" value="./models/openclaw-q4.gguf" />
+              </label>
+              <label>
+                服务端口
+                <input type="number" id="service-port" value="8080" />
+              </label>
+              <label>
+                最大上下文长度
+                <input type="number" id="context-size" value="8192" />
+              </label>
+              <label>
+                GPU Layer
+                <input type="number" id="gpu-layers" value="35" />
+              </label>
+              <label>
+                启动命令预设
+                <select id="preset-select">
+                  <option value="balanced">Balanced · 开发调试</option>
+                  <option value="fast">Fast · 最快响应</option>
+                  <option value="memory">Memory Saver · 低显存</option>
+                </select>
+              </label>
+              <label class="toggle-row">
+                <span>启动后自动打开浏览器</span>
+                <input type="checkbox" id="auto-browser" checked />
+              </label>
+            </form>
+          </section>
+
+          <section class="card health-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Health</p>
+                <h3>实时状态</h3>
+              </div>
+              <span id="health-badge" class="badge success">环境就绪</span>
+            </div>
+
+            <div class="metric-list">
+              <article>
+                <span class="label">CPU</span>
+                <strong id="cpu-usage">18%</strong>
+                <div class="progress"><span style="width: 18%"></span></div>
+              </article>
+              <article>
+                <span class="label">GPU</span>
+                <strong id="gpu-usage">42%</strong>
+                <div class="progress"><span style="width: 42%"></span></div>
+              </article>
+              <article>
+                <span class="label">Memory</span>
+                <strong id="memory-usage">12.6 / 32 GB</strong>
+                <div class="progress"><span style="width: 39%"></span></div>
+              </article>
+            </div>
+
+            <div class="tips-panel">
+              <h4>启动建议</h4>
+              <ul id="suggestions">
+                <li>当前配置适合本地开发与功能验证。</li>
+                <li>如需更快首 token，可切换到 Fast 预设。</li>
+                <li>若显存不足，建议降低 GPU Layer。</li>
+              </ul>
+            </div>
+          </section>
+        </section>
+
+        <section class="grid two-col bottom-grid">
+          <section class="card command-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Command</p>
+                <h3>即将执行的命令</h3>
+              </div>
+              <button id="copy-btn" class="ghost-btn small">复制命令</button>
+            </div>
+            <pre id="command-preview" class="command-preview"></pre>
+          </section>
+
+          <section class="card log-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Logs</p>
+                <h3>运行日志</h3>
+              </div>
+              <span class="badge dark">实时滚动</span>
+            </div>
+            <div id="log-output" class="log-output" aria-live="polite"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="log-line-template">
+      <div class="log-line">
+        <span class="log-time"></span>
+        <span class="log-level"></span>
+        <span class="log-message"></span>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
