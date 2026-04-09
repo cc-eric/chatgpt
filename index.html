@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenClaw 控制台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar card">
+        <div>
+          <p class="eyebrow">OpenClaw</p>
+          <h1>本地/远程 控制台</h1>
+          <p class="muted">默认监听 127.0.0.1:18789，也支持通过 Tailscale 内网远程访问。</p>
+        </div>
+
+        <section class="status-overview">
+          <div>
+            <span class="label">运行状态</span>
+            <strong id="run-status">读取中...</strong>
+          </div>
+          <div>
+            <span class="label">最后执行</span>
+            <strong id="last-run">--</strong>
+          </div>
+          <div>
+            <span class="label">服务监听</span>
+            <strong id="listen-address">127.0.0.1:18789</strong>
+          </div>
+        </section>
+
+        <section class="tips-panel compact">
+          <h4>快速访问</h4>
+          <ul>
+            <li id="local-url">本地: http://127.0.0.1:18789</li>
+            <li id="remote-url">远程: 未配置</li>
+          </ul>
+          <button id="copy-url-btn" class="ghost-btn small">复制当前访问地址</button>
+        </section>
+      </aside>
+
+      <main class="main-content">
+        <section class="hero card">
+          <div>
+            <p class="eyebrow">Control Plane</p>
+            <h2>可在本机运行，也可经 Tailscale 远程访问</h2>
+            <p class="muted">支持启动参数管理、服务控制、实时健康状态和运行日志。</p>
+          </div>
+          <div class="hero-actions">
+            <button id="start-btn" class="primary-btn">启动 OpenClaw</button>
+            <button id="stop-btn" class="secondary-btn">停止服务</button>
+            <button id="refresh-btn" class="ghost-btn">刷新状态</button>
+          </div>
+        </section>
+
+        <section class="grid two-col">
+          <section class="card form-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Config</p>
+                <h3>运行参数</h3>
+              </div>
+              <span id="health-badge" class="badge">待校验</span>
+            </div>
+
+            <form id="config-form" class="config-form">
+              <label>
+                模型路径
+                <input type="text" id="model-path" value="./models/openclaw-q4.gguf" />
+              </label>
+              <label>
+                服务端口
+                <input type="number" id="service-port" value="8080" />
+              </label>
+              <label>
+                最大上下文长度
+                <input type="number" id="context-size" value="8192" />
+              </label>
+              <label>
+                GPU Layer
+                <input type="number" id="gpu-layers" value="35" />
+              </label>
+              <label>
+                启动命令预设
+                <select id="preset-select">
+                  <option value="balanced">Balanced · 开发调试</option>
+                  <option value="fast">Fast · 最快响应</option>
+                  <option value="memory">Memory Saver · 低显存</option>
+                </select>
+              </label>
+              <label class="toggle-row">
+                <span>启动后自动打开浏览器</span>
+                <input type="checkbox" id="auto-browser" checked />
+              </label>
+            </form>
+          </section>
+
+          <section class="card health-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Remote Access</p>
+                <h3>Tailscale 访问配置</h3>
+              </div>
+              <span class="badge success">Zero Config</span>
+            </div>
+
+            <div class="config-form single-col">
+              <label>
+                Tailscale 设备地址 / MagicDNS
+                <input type="text" id="tailscale-host" placeholder="例如: 100.90.10.20 或 mynode.tailnet.ts.net" />
+              </label>
+              <label>
+                访问 Token（可选）
+                <input type="text" id="access-token" placeholder="与服务端 ACCESS_TOKEN 保持一致" />
+              </label>
+              <label class="toggle-row">
+                <span>启用远程访问提示</span>
+                <input type="checkbox" id="remote-enabled" checked />
+              </label>
+            </div>
+
+            <div class="tips-panel">
+              <h4>服务器启动建议</h4>
+              <ul id="suggestions">
+                <li>本地模式: node server.js（默认 127.0.0.1:18789）。</li>
+                <li>远程模式: HOST=0.0.0.0 PORT=18789 node server.js。</li>
+                <li>建议配置 ACCESS_TOKEN 保护远程访问。</li>
+              </ul>
+            </div>
+          </section>
+        </section>
+
+        <section class="grid two-col bottom-grid">
+          <section class="card command-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Command</p>
+                <h3>即将执行的命令</h3>
+              </div>
+              <button id="copy-btn" class="ghost-btn small">复制命令</button>
+            </div>
+            <pre id="command-preview" class="command-preview"></pre>
+          </section>
+
+          <section class="card log-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Logs</p>
+                <h3>运行日志</h3>
+              </div>
+              <span class="badge dark">实时滚动</span>
+            </div>
+            <div id="log-output" class="log-output" aria-live="polite"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="log-line-template">
+      <div class="log-line">
+        <span class="log-time"></span>
+        <span class="log-level"></span>
+        <span class="log-message"></span>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
