@@ -10,11 +10,11 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForServerReady(maxTry = 20) {
+async function waitForServerReady(host, port, token, maxTry = 20) {
   for (let i = 0; i < maxTry; i += 1) {
     try {
-      const res = await fetch(`http://${HOST}:${PORT}/api/status`, {
-        headers: { 'x-access-token': TOKEN }
+      const res = await fetch(`http://${host}:${port}/api/status`, {
+        headers: { 'x-access-token': token }
       });
       if (res.ok) return;
     } catch {
@@ -25,24 +25,29 @@ async function waitForServerReady(maxTry = 20) {
   throw new Error('server not ready in time');
 }
 
-test('server auth + lifecycle + logs api', async (t) => {
-  const child = spawn('node', ['server.js'], {
+function spawnServer({ port, mock, bin = 'openclaw' }) {
+  return spawn('node', ['server.js'], {
     cwd: process.cwd(),
     env: {
       ...process.env,
       HOST,
-      PORT: String(PORT),
+      PORT: String(port),
       ACCESS_TOKEN: TOKEN,
-      OPENCLAW_MOCK: '1'
+      OPENCLAW_MOCK: mock ? '1' : '0',
+      OPENCLAW_BIN: bin
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
+}
+
+test('server auth + lifecycle + logs api', async (t) => {
+  const child = spawnServer({ port: PORT, mock: true });
 
   t.after(() => {
     child.kill('SIGTERM');
   });
 
-  await waitForServerReady();
+  await waitForServerReady(HOST, PORT, TOKEN);
 
   const unauthorized = await fetch(`http://${HOST}:${PORT}/api/status`);
   assert.equal(unauthorized.status, 401);
@@ -74,7 +79,6 @@ test('server auth + lifecycle + logs api', async (t) => {
   const startBody = await start.json();
   assert.equal(startBody.running, true);
 
-
   const statusAfterStart = await fetch(`http://${HOST}:${PORT}/api/status`, {
     headers: { 'x-access-token': TOKEN }
   });
@@ -96,4 +100,34 @@ test('server auth + lifecycle + logs api', async (t) => {
   assert.equal(stop.status, 200);
   const stopBody = await stop.json();
   assert.equal(stopBody.running, false);
+});
+
+test('start api returns 500 when binary is missing (no false success)', async (t) => {
+  const port = 18792;
+  const child = spawnServer({ port, mock: false, bin: '__definitely_missing_openclaw__' });
+
+  t.after(() => {
+    child.kill('SIGTERM');
+  });
+
+  await waitForServerReady(HOST, port, TOKEN);
+
+  const start = await fetch(`http://${HOST}:${port}/api/start`, {
+    method: 'POST',
+    headers: {
+      'x-access-token': TOKEN,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      modelPath: './models/openclaw-q4.gguf',
+      servicePort: 8080,
+      contextSize: 8192,
+      gpuLayers: 35,
+      preset: 'balanced'
+    })
+  });
+
+  assert.equal(start.status, 500);
+  const body = await start.json();
+  assert.match(body.message, /进程启动失败/);
 });

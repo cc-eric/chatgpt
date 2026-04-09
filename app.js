@@ -201,7 +201,6 @@ document.getElementById('stop-btn').addEventListener('click', stopService);
 document.getElementById('refresh-btn').addEventListener('click', async () => {
   try {
     await refreshStatus();
-    addLog('info', '状态同步成功。');
   } catch (error) {
     addLog('error', `状态同步失败: ${error.message}`);
   }
@@ -222,4 +221,7 @@ updateStatusUI();
 refreshStatus().catch((error) => addLog('error', `初始化失败: ${error.message}`));
 pullLogs();
 setInterval(pullLogs, 2000);
+setInterval(() => {
+  refreshStatus().catch(() => {});
+}, 3000);
 addLog('info', '控制台初始化完成。');

@@ -91,15 +91,9 @@ function buildArgs(config) {
   const gpu = parsePositiveInt(config.gpuLayers, 35);
   const preset = presetMap[config.preset] || presetMap.balanced;
 
-  if (!modelPath) {
-    throw new Error('modelPath 不能为空');
-  }
-  if (port < 1 || port > 65535) {
-    throw new Error('servicePort 超出范围');
-  }
-  if (ctx < 1024) {
-    throw new Error('contextSize 过小');
-  }
+  if (!modelPath) throw new Error('modelPath 不能为空');
+  if (port < 1 || port > 65535) throw new Error('servicePort 超出范围');
+  if (ctx < 1024) throw new Error('contextSize 过小');
 
   const args = [
     'serve',
@@ -111,14 +105,8 @@ function buildArgs(config) {
     '--batch-size', String(preset.batch)
   ];
 
-  if (Boolean(config.autoBrowser)) {
-    args.push('--open-browser');
-  }
-
-  if (Boolean(config.openInternet)) {
-    args.push('--allow-internet');
-  }
-
+  if (Boolean(config.autoBrowser)) args.push('--open-browser');
+  if (Boolean(config.openInternet)) args.push('--allow-internet');
   return args;
 }
 
@@ -129,42 +117,17 @@ function cleanupProcessState() {
   runtime.startedAt = null;
 }
 
-function startMockProcess() {
+function startMockProcess(command) {
+  runtime.command = `${command} [mock]`;
   runtime.running = true;
   runtime.lastRun = new Date().toLocaleString('zh-CN', { hour12: false });
   runtime.startedAt = Date.now();
   runtime.pid = `mock-${Date.now()}`;
+  pushLog('info', `启动命令: ${runtime.command}`);
   pushLog('info', 'OPENCLAW_MOCK=1，已启动模拟进程。');
 }
 
-function startOpenClaw(config) {
-  if (runtime.running) {
-    throw new Error('OpenClaw 已在运行中');
-  }
-
-  runtime.config = config;
-
-  const args = buildArgs(config);
-
-  if (OPENCLAW_MOCK) {
-    runtime.command = `${OPENCLAW_BIN} ${args.join(' ')} [mock]`;
-    startMockProcess();
-    return;
-  }
-  runtime.command = `${OPENCLAW_BIN} ${args.join(' ')}`;
-  const child = spawn(OPENCLAW_BIN, args, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: process.env
-  });
-
-  runtime.process = child;
-  runtime.running = true;
-  runtime.pid = child.pid;
-  runtime.startedAt = Date.now();
-  runtime.lastRun = new Date().toLocaleString('zh-CN', { hour12: false });
-
-  pushLog('info', `启动命令: ${runtime.command}`);
-
+function attachRuntimeListeners(child) {
   child.stdout.on('data', (chunk) => {
     const text = chunk.toString().trim();
     if (text) pushLog('info', text);
@@ -175,14 +138,54 @@ function startOpenClaw(config) {
     if (text) pushLog('warn', text);
   });
 
-  child.on('error', (err) => {
-    pushLog('error', `进程启动失败: ${err.message}`);
-    cleanupProcessState();
-  });
-
   child.on('close', (code, signal) => {
     pushLog('warn', `进程退出: code=${code ?? 'null'} signal=${signal ?? 'null'}`);
     cleanupProcessState();
+  });
+}
+
+async function startOpenClaw(config) {
+  if (runtime.running) throw new Error('OpenClaw 已在运行中');
+
+  runtime.config = config;
+  const args = buildArgs(config);
+  const command = `${OPENCLAW_BIN} ${args.join(' ')}`;
+
+  if (OPENCLAW_MOCK) {
+    startMockProcess(command);
+    return;
+  }
+
+  const child = spawn(OPENCLAW_BIN, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: process.env
+  });
+
+  await new Promise((resolve, reject) => {
+    let settled = false;
+
+    child.once('spawn', () => {
+      if (settled) return;
+      settled = true;
+      runtime.command = command;
+      runtime.process = child;
+      runtime.running = true;
+      runtime.pid = child.pid;
+      runtime.startedAt = Date.now();
+      runtime.lastRun = new Date().toLocaleString('zh-CN', { hour12: false });
+      pushLog('info', `启动命令: ${runtime.command}`);
+      attachRuntimeListeners(child);
+      resolve();
+    });
+
+    child.once('error', (err) => {
+      if (settled) return;
+      settled = true;
+      cleanupProcessState();
+      const hint = `请确认 ${OPENCLAW_BIN} 可执行，或设置 OPENCLAW_MOCK=1。`;
+      pushLog('error', `进程启动失败: ${err.message}`);
+      reject(new Error(`进程启动失败: ${err.message}；${hint}`));
+    });
   });
 }
 
@@ -194,9 +197,7 @@ function stopOpenClaw() {
     return true;
   }
 
-  if (!runtime.process || !runtime.running) {
-    return false;
-  }
+  if (!runtime.process || !runtime.running) return false;
 
   const ok = runtime.process.kill('SIGTERM');
   pushLog(ok ? 'warn' : 'error', ok ? '已发送 SIGTERM 停止进程。' : '发送 SIGTERM 失败。');
@@ -228,7 +229,7 @@ async function handleApi(req, res, reqUrl) {
   if (req.method === 'POST' && reqUrl.pathname === '/api/start') {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : {};
-    startOpenClaw(body);
+    await startOpenClaw(body);
     sendJSON(res, 200, {
       running: runtime.running,
       lastRun: runtime.lastRun,
@@ -286,17 +287,12 @@ const server = http.createServer(async (req, res) => {
       res.end(data);
     });
   } catch (error) {
-    pushLog('error', error.message);
     sendJSON(res, 500, { error: 'server_error', message: error.message });
   }
 });
 
 server.listen(PORT, HOST, () => {
   console.log(`[openclaw-ui] listening at http://${HOST}:${PORT}`);
-  if (ACCESS_TOKEN) {
-    console.log('[openclaw-ui] access token enabled');
-  }
-  if (OPENCLAW_MOCK) {
-    console.log('[openclaw-ui] mock mode enabled');
-  }
+  if (ACCESS_TOKEN) console.log('[openclaw-ui] access token enabled');
+  if (OPENCLAW_MOCK) console.log('[openclaw-ui] mock mode enabled');
 });

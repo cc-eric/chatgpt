@@ -67,3 +67,14 @@ curl -X POST -H 'x-access-token: your-token' -H 'Content-Type: application/json'
   -d '{"modelPath":"./models/openclaw-q4.gguf","servicePort":8080,"contextSize":8192,"gpuLayers":35,"preset":"balanced","openInternet":true}' \
   http://127.0.0.1:18789/api/start
 ```
+
+
+## 常见问题
+
+### 启动时报 `spawn openclaw ENOENT`
+
+这表示系统找不到 `openclaw` 可执行文件。可选方案：
+
+- 安装并确保 `openclaw` 在 PATH 中
+- 或设置 `OPENCLAW_BIN=/your/path/openclaw`
+- 或开发联调使用 `OPENCLAW_MOCK=1`
